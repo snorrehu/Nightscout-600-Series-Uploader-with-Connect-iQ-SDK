@@ -1,5 +1,6 @@
 # Nightscout-600-Series-Uploader-with-Connect-iQ-SDK
-This is a modified version of the pazaans Nightscout uploader, found here: https://github.com/pazaan/600SeriesAndroidUploader
+This is a modified version of the pazaans Nightscout uploader, found here: https://github.com/pazaan/600SeriesAndroidUploader.
+
 It works for MiniMed 600 Series insulin pumps using a Contour Next Link 2.4 blood glucose meter.
 
 This projects aim is to implement communication between this application and Garmin devices running a Connect iQ datafield, enabling blood glucose values to be logged along with other activity data. 
