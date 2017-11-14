@@ -3,7 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="info.nightscout.android">
 
-    <uses-sdk android:minSdkVersion="14" android:maxSdkVersion="23"
+
+    <uses-sdk android:minSdkVersion="16" android:maxSdkVersion="23"
         tools:overrideLibrary="com.github.mikephil.charting.data.realm"/>
 
     <uses-feature android:name="android.hardware.usb.host" />
@@ -50,12 +51,16 @@
             <meta-data
                 android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/device_filter" />
+            <meta-data android:name="io.fabric.ApiKey" android:value="YOUR_API_KEY"/>
         </activity>
         <activity
             android:name=".settings.SettingsActivity"
             android:icon="@drawable/ic_launcher"
             android:label="Settings"
             android:theme="@style/SettingsTheme" />
+
+
+
         <activity
             android:name=".SplashActivity"
             android:theme="@style/SplashTheme">
@@ -68,6 +73,13 @@
 
         <activity android:name=".medtronic.ManageCNLActivity"/>
 
+        <activity android:name=".connectiq.Connect_IQ_Activity" />
+
+        <activity android:name=".strava.StravaActivity" />
+        <activity
+            android:name="com.sweetzpot.stravazpot.authenticaton.ui.StravaLoginActivity"
+            android:label="@string/login_strava" />
+
         <activity android:name=".medtronic.StatusActivity" />
 
         <service
@@ -79,6 +91,8 @@
         <service
             android:name=".medtronic.service.MedtronicCnlIntentService"
             android:icon="@drawable/ic_launcher" />
+
+        <service android:name=".connectiq.Connect_IQ_Message_Service"/>
 
         <receiver android:name=".medtronic.service.MedtronicCnlAlarmReceiver" />
         <receiver android:name=".upload.nightscout.NightscoutUploadReceiver" />

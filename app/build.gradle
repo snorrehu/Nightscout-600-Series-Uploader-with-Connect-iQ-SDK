@@ -12,6 +12,7 @@ buildscript {
         classpath 'io.realm:realm-gradle-plugin:3.4.0'
         classpath 'org.ajoberstar:grgit:1.5.0'
         classpath 'org.codehaus.groovy:groovy-json:2.4.12'
+
     }
 }
 plugins {
@@ -70,7 +71,7 @@ android {
 
     defaultConfig {
         applicationId "info.nightscout.android"
-        minSdkVersion 14
+        minSdkVersion 16
         targetSdkVersion 25
         versionName generateVersionName()
         versionCode generateVersionCode()
@@ -106,6 +107,7 @@ release {
 dependencies {
     compile files('libs/slf4j-api-1.7.2.jar')
 
+    compile 'com.sweetzpot.stravazpot:lib:1.2'
     compile 'com.android.support:support-v13:25.3.1'
     compile 'com.android.support:design:25.3.1'
     compile 'com.android.support:appcompat-v7:25.3.1'
@@ -136,6 +138,10 @@ dependencies {
         transitive = true
     }
     compile 'com.github.javiersantos:AppUpdater:2.6.1'
+
+    compile fileTree(dir: 'libs', include: ['*.jar']) //compile files('libs/connectiq.jar')
+    testCompile 'junit:junit:4.12'
+
 }
 
 apply from: "signing.gradle"

@@ -1,6 +1,9 @@
 package info.nightscout.android.medtronic;
 
+
+
 import android.app.AlarmManager;
+import android.app.AlertDialog;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
@@ -42,6 +45,13 @@ import android.widget.TextView;
 import android.widget.TextView.BufferType;
 import android.widget.Toast;
 
+
+import com.garmin.android.connectiq.ConnectIQ;
+import com.garmin.android.connectiq.IQApp;
+import com.garmin.android.connectiq.IQDevice;
+import com.garmin.android.connectiq.ConnectIQ.IQApplicationInfoListener;
+import com.garmin.android.connectiq.exception.InvalidStateException;
+import com.garmin.android.connectiq.exception.ServiceUnavailableException;
 import com.github.javiersantos.appupdater.AppUpdater;
 import com.github.javiersantos.appupdater.enums.UpdateFrom;
 import com.jjoe64.graphview.DefaultLabelFormatter;
@@ -63,12 +73,14 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import info.nightscout.android.R;
 import info.nightscout.android.USB.UsbHidDriver;
+import info.nightscout.android.connectiq.Connect_IQ_Message_Service;
 import info.nightscout.android.eula.Eula;
 import info.nightscout.android.eula.Eula.OnEulaAgreedTo;
 import info.nightscout.android.medtronic.service.MedtronicCnlAlarmManager;
@@ -76,6 +88,7 @@ import info.nightscout.android.medtronic.service.MedtronicCnlIntentService;
 import info.nightscout.android.model.medtronicNg.PumpInfo;
 import info.nightscout.android.model.medtronicNg.PumpStatusEvent;
 import info.nightscout.android.settings.SettingsActivity;
+import info.nightscout.android.strava.StravaActivity;
 import info.nightscout.android.utils.ConfigurationStore;
 import info.nightscout.android.utils.DataStore;
 import io.realm.Realm;
@@ -83,6 +96,8 @@ import io.realm.RealmChangeListener;
 import io.realm.RealmResults;
 import io.realm.Sort;
 import uk.co.chrisjenx.calligraphy.CalligraphyContextWrapper;
+
+
 
 public class MainActivity extends AppCompatActivity implements OnSharedPreferenceChangeListener, OnEulaAgreedTo {
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -107,6 +122,15 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     private StatusMessageReceiver statusMessageReceiver = new StatusMessageReceiver();
     private UsbReceiver usbReceiver = new UsbReceiver();
     private BatteryReceiver batteryReceiver = new BatteryReceiver();
+
+    //------------------CIQ---------------------
+    private ConnectIQ mConnectIQ;
+    private IQDevice mDevice;
+    private IQApp mApp;
+    private boolean mSdkReady = false;
+    String iqAppID = "550399c206ba496195222351d11c256a";
+    //-----------------------------------------
+
 
     private DateFormat dateFormatter = new SimpleDateFormat("HH:mm:ss", Locale.US);
 
@@ -148,12 +172,28 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         return nextPoll;
     }
 
+
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         Log.i(TAG, "onCreate called");
         super.onCreate(savedInstanceState);
 
         mRealm = Realm.getDefaultInstance();
+
+
+        //--------------CIQ------------------------------
+        // Device Connect IQ Application ID (manifest file):
+        mApp = new IQApp(iqAppID);
+        // TETHERED connection type for sim test.
+        // Use WIRELESS for real device bluetooth connection.
+        mConnectIQ = ConnectIQ.getInstance(this, ConnectIQ.IQConnectType.WIRELESS);
+
+        // Initialize the SDK
+        mConnectIQ.initialize(this, true, mListener);
+
+        //-------------------------------------------------
+
 
         RealmResults<PumpStatusEvent> data = mRealm.where(PumpStatusEvent.class)
                 .findAllSorted("eventDate", Sort.DESCENDING);
@@ -264,6 +304,14 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
                 .withName("Check for App update")
                 .withIcon(GoogleMaterial.Icon.gmd_update)
                 .withSelectable(false);
+        final PrimaryDrawerItem itemConnectiq = new PrimaryDrawerItem()
+                .withName("Connect iQ")
+                .withIcon(GoogleMaterial.Icon.gmd_update)
+                .withSelectable(false);
+        final PrimaryDrawerItem itemStrava = new PrimaryDrawerItem()
+                .withName("Strava")
+                .withIcon(GoogleMaterial.Icon.gmd_update)
+                .withSelectable(false);
 
         assert toolbar != null;
         new DrawerBuilder()
@@ -284,7 +332,9 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
                         itemCheckForUpdate,
                         itemClearLog,
                         itemGetNow,
-                        itemStopCollecting
+                        itemStopCollecting,
+                        itemConnectiq,
+                        itemStrava
                 )
                 .withOnDrawerItemClickListener(new Drawer.OnDrawerItemClickListener() {
                     @Override
@@ -305,6 +355,14 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
                             clearLogText();
                         } else if (drawerItem.equals(itemCheckForUpdate)) {
                             checkForUpdateNow();
+                        }
+                        else if (drawerItem.equals(itemConnectiq)) {
+                            Log.d(TAG,"Menu: Connect iQ");
+                            //openConnectiqSettings();
+                        }
+                        else if (drawerItem.equals(itemStrava)) {
+                            Log.d(TAG,"Menu: Strava");
+                            openStravaSettings();
                         }
 
                         return false;
@@ -630,6 +688,11 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         startActivity(intent);
     }
 
+    public void openStravaSettings(){
+        Intent intent = new Intent(this, StravaActivity.class);
+        startActivity(intent);
+    }
+
     public void openUsbRegistration() {
         Intent manageCNLIntent = new Intent(this, ManageCNLActivity.class);
         startActivity(manageCNLIntent);
@@ -809,7 +872,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     private class RefreshDisplayRunnable implements Runnable {
         @Override
         public void run() {
-            long nextRun = 60000L;
+            long nextRun = 10000L;
 
             TextView textViewBg = (TextView) findViewById(R.id.textview_bg);
             TextView textViewBgTime = (TextView) findViewById(R.id.textview_bg_time);
@@ -835,9 +898,11 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
                     .findAllSorted("sgvDate", Sort.ASCENDING));
 
             if (pumpStatusData != null) {
+                Log.d(TAG,"RefreshDisplayRunnable: pumpStatusData = " + pumpStatusData);
                 String sgvString;
                 if (pumpStatusData.isCgmActive()) {
                     sgvString = MainActivity.strFormatSGV(pumpStatusData.getSgv());
+                    Log.d(TAG,"Loop: sgvStrig = " + sgvString);
                     if (configurationStore.isMmolxl()) {
                         Log.d(TAG, sgvString + " mmol/L");
                     } else {
@@ -845,10 +910,16 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
                     }
                 } else {
                     sgvString = "\u2014"; // &mdash;
+                    Log.d(TAG,"Loop: sgvStrig = " + sgvString);
                 }
 
-                nextRun = 60000L - (System.currentTimeMillis() - pumpStatusData.getSgvDate().getTime()) % 60000L;
+
+
+
+
+                nextRun = 10000L - (System.currentTimeMillis() - pumpStatusData.getSgvDate().getTime()) % 10000L;
                 textViewBg.setText(sgvString);
+
                 textViewBgTime.setText(DateUtils.getRelativeTimeSpanString(pumpStatusData.getSgvDate().getTime()));
 
                 textViewTrend.setText(MainActivity.renderTrendSymbol(pumpStatusData.getCgmTrend()));
@@ -885,7 +956,8 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
 
             }
 
-            // Run myself again in 60 (or less) seconds;
+
+            // Run myself again in 10 (or less) seconds;
             mUiRefreshHandler.postDelayed(this, nextRun);
         }
 
@@ -1071,4 +1143,109 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         }
     }
 
+    //----------------------------------CIQ---------------------------------------------------------
+    // List of known devices
+    public void loadDevices() {
+        Log.d(TAG,"->loadDevices");
+        try {
+            List<IQDevice> paired = mConnectIQ.getKnownDevices();
+
+            if (paired != null && paired.size() > 0) {
+
+                for (IQDevice device : paired) {
+                    IQDevice.IQDeviceStatus status = mConnectIQ.getDeviceStatus(device);
+                    if (status == IQDevice.IQDeviceStatus.CONNECTED) {
+                        // Work with the device
+                        mDevice = device;
+
+                        mConnectIQ.getApplicationInfo(iqAppID,mDevice,mAppInfoListener);
+                        mConnectIQ.registerForDeviceEvents(mDevice,mDeviceEventListener);
+                        //----------------Here is where the code terminates---------------
+                        mConnectIQ.registerForAppEvents(mDevice,mApp,mAppEventListener);
+                        //----------------------------------------------------------------
+
+                    }
+                }
+            }
+        } catch (InvalidStateException e) {
+        } catch (ServiceUnavailableException e) {
+            // Garmin Connect Mobile is not installed or needs to be upgraded.
+            Log.d(TAG,"Garmin Connect Mobile is not installed or needs to be upgraded.");
+        }
+    }
+
+    private ConnectIQ.IQApplicationInfoListener mAppInfoListener = new ConnectIQ.IQApplicationInfoListener(){
+        @Override
+        public void onApplicationInfoReceived(IQApp iqApp) {
+            Log.d(TAG,"Connect IQ application info received.");
+        }
+
+        @Override
+        public void onApplicationNotInstalled(String s) {
+            Log.d(TAG,"Garmin Connect Mobile is not installed on this device.");
+        }
+    };
+
+
+    private ConnectIQ.IQDeviceEventListener mDeviceEventListener = new ConnectIQ.IQDeviceEventListener() {
+        @Override
+        public void onDeviceStatusChanged(IQDevice device, IQDevice.IQDeviceStatus status) {
+            Log.d(TAG,"Device connected: " + device);
+        }
+    };
+
+
+
+
+    ConnectIQ.IQApplicationEventListener mAppEventListener = new ConnectIQ.IQApplicationEventListener() {
+        @Override
+        public void onMessageReceived(IQDevice iqDevice, IQApp iqApp, List<Object> message, ConnectIQ.IQMessageStatus iqMessageStatus) {
+            Log.d(TAG, "Message received from Connect iQ device");
+            if (message.size() > 0) {
+                for (Object o : message) {
+                    int request = (Integer) o;
+
+                    if(request == 0){
+                        Log.d(TAG,"Request received. Replying with CGM data.");
+                        Log.d(TAG,"Message = " + request);
+                        Intent connectIQIntent = new Intent(MainActivity.this, Connect_IQ_Message_Service.class);
+                        startService(connectIQIntent);
+                        Log.d(TAG,"sgv data sendt to CIQ Device.");
+                    }
+                    else{
+                        Log.d(TAG,"Something else was received");
+                        Log.d(TAG,"Message = " + request);
+                    }
+                }
+            } else {
+                AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
+                dialog.setTitle(R.string.received_message);
+                dialog.setMessage("Received an empty message from the watch");
+                dialog.setPositiveButton(android.R.string.ok, null);
+                dialog.create().show();
+            }
+        }
+    };
+    private ConnectIQ.ConnectIQListener mListener = new ConnectIQ.ConnectIQListener() {
+        @Override
+        public void onInitializeError(ConnectIQ.IQSdkErrorStatus errStatus) {
+            Log.d(TAG,"Failed to initialize the SDK");
+        }
+
+        @Override
+        public void onSdkReady() {
+            Log.d(TAG,"-> onSdkReady");
+            loadDevices();
+            mSdkReady = true;
+        }
+
+        @Override
+        public void onSdkShutDown() {
+            Log.d(TAG,"-> onSdkShutDown");
+            mSdkReady = false;
+        }
+
+    };
+
+//--------------------------------------------------------------------------------------------------
 }

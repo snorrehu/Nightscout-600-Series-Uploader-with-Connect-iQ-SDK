@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="login_strava">Login to Strava</string>
     <string name="app_name">600 Series Uploader</string>
     <string name="eula_title">Disclaimer</string>
     <string name="eula_accept">Accept</string>
@@ -15,6 +16,22 @@
         <item>Debug</item>
     </string-array>
 
+    <!-- Strings related to Connect iQ -->
+    <string name="action_settings">Settings</string>
+    <string name="up">-1</string>
+    <string name="down">+1</string>
+    <string name="reset">reset</string>
+    <string name="load_devices">Reload Devices</string>
+    <string name="initialization_error">Failed to initalize the SDK.\n</string>
+    <string name="service_unavailable">The ConnectIQ service is unavailabe.</string>
+    <string name="missing_widget">Missing Comm Widget</string>
+    <string name="missing_widget_message">The Comm Widget used with this application is not installed on your ConnectIQ device.   Please install the widget and try again.</string>
+    <string name="received_message">Received message from device.</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_not_connected">Not Connected</string>
+    <string name="status_not_paired">Not Paired</string>
+    <string name="status_unknown">Unknown</string>
+
     <!-- Strings related to login -->
     <string name="preferences_enable_crashlytics">prefs_enable_crashlytics</string>
     <string name="preferences_enable_answers">prefs_enable_answers</string>
@@ -25,12 +42,10 @@
     <string name="error_msg_api_secret_length">API Secret must be 12 characters or longer.</string>
     <string name="text_unit_mmolxl">mmol/L</string>
     <string name="text_unit_mgxdl">mg/dL</string>
-
     <string name="menu_name_status">Status</string>
     <string name="menu_name_battery_status">unknown</string>
     <string name="preference_api_secret">YOUR.API.SECRET</string>
     <string name="preference_nightscout_url">YOUR.NIGHTSCOUT.URL</string>
-
     <string name="preferences_poll_interval">Poll interval</string>
     <string name="preferences_low_battery_poll_interval">Poll interval on low pump battery</string>
     <string name="no_registered_contour_next_link_devices">No registered Contour Next Link devices</string>
