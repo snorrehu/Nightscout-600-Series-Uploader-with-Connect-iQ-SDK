@@ -60,3 +60,4 @@ This is an Android app to upload data from a MiniMed 600 Series insulin pump to 
 + Please note - this project has **no** association with and is **not** endorsed by:
  + [Medtronic](http://www.medtronicdiabetes.com/)
  + [Ascensia Diabetes Care (formerly Bayer Diabetes Care)](http://www.ascensia.com/)
+# Nightscout-600-Series-Uploader-with-Connect-iQ-SDK
